@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Videmy Infotech - Registration & Payment</title>
+  <!-- Client-side QR Code library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <style>
+    /* Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f2027 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: #333333;
+    }
+
+    /* Container Card */
+    .card-container {
+      background: #ffffff;
+      width: 100%;
+      max-width: 550px;
+      border-radius: 12px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    /* Header Section */
+    .header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+      color: #ffffff;
+      padding: 25px 20px;
+      text-align: center;
+    }
+
+    .company-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .address-info {
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: #e0e7ff;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* Form Section */
+    .body-content {
+      padding: 25px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+
+    .required {
+      color: #ef4444;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    input[type="tel"] {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      background-color: #f9fafb;
+    }
+
+    input:focus {
+      border-color: #2563eb;
+      background-color: #ffffff;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    /* Phone Input Layout */
+    .phone-input-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .country-code {
+      width: 70px;
+      padding: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background-color: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      text-align: center;
+      color: #4b5563;
+    }
+
+    .phone-input-group input {
+      flex: 1;
+    }
+
+    /* Terms Checkbox */
+    .checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      margin-top: 3px;
+      width: 16px;
+      height: 16px;
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+
+    .checkbox-label {
+      font-size: 0.85rem;
+      color: #4b5563;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+
+    /* Submit Button */
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      padding: 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    .submit-btn:hover {
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    }
+
+    .submit-btn:disabled {
+      background: #93c5fd;
+      cursor: not-allowed;
+    }
+
+    /* --- PAYMENT PAGE STYLES --- */
+    #payment-section {
+      display: none; /* Hidden until form is valid */
+      text-align: center;
+    }
+
+    .pay-amount {
+      font-size: 1.5rem;
+      color: #1e293b;
+      margin-bottom: 20px;
+      font-weight: 700;
+    }
+
+    .btn {
+      display: block;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 6px;
+      text-decoration: none;
+      color: #fff;
+      font-weight: bold;
+      transition: opacity 0.2s ease;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .gpay { background: #4285F4; }
+    .phonepe { background: #5f259f; }
+
+    .divider {
+      margin: 15px 0;
+      color: #6b7280;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    #qrcode {
+      margin: 15px auto;
+      display: flex;
+      justify-content: center;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-top: 15px;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card-container">
+    <!-- Header Section -->
+    <div class="header">
+      <h1 class="company-title">VIDEMY INFOTECH PRIVATE LIMITED</h1>
+      <p class="address-info">
+        50-40-28, 4th floor, GMR arcade, Opposite co-operative bank, Tpt colony, Seethammadhara, Visakhapatnam, 530013
+      </p>
+    </div>
+
+    <!-- Page 1: Registration Form (Netlify Form Enabled) -->
+    <div id="form-section" class="body-content">
+      <form id="registrationForm" name="registration" data-netlify="true" method="POST">
+        <!-- Hidden input field strictly required for Netlify Ajax Forms -->
+        <input type="hidden" name="form-name" value="registration" />
+
+        <div class="form-group">
+          <label for="name">Name <span class="required">*</span></label>
+          <input type="text" id="name" name="name" required placeholder="Enter full name">
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number <span class="required">*</span></label>
+          <div class="phone-input-group">
+            <input type="text" class="country-code" value="+91" readonly>
+            <input type="tel" id="phone" name="phone" required placeholder="10-digit number" pattern="[0-9]{10}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="parent_phone">Parent Number</label>
+          <input type="tel" id="parent_phone" name="parent_phone" placeholder="Parent's phone number">
+        </div>
+
+        <div class="form-group">
+          <label for="course">Course Name <span class="required">*</span></label>
+          <input type="text" id="course" name="course" required placeholder="Enter course name">
+        </div>
+
+        <div class="form-group">
+          <label for="employee_id">Videmy Employee ID</label>
+          <input type="text" id="employee_id" name="employee_id" placeholder="Optional">
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email ID <span class="required">*</span></label>
+          <input type="email" id="email" name="email" required placeholder="example@domain.com">
+        </div>
+
+        <div class="form-group">
+          <label for="amount">Amount (₹) <span class="required">*</span></label>
+          <input type="number" id="amount" name="amount" required min="1" placeholder="Enter amount">
+        </div>
+
+        <div class="checkbox-group">
+          <input type="checkbox" id="terms" name="terms_agreed" required>
+          <label for="terms" class="checkbox-label">
+            I agree to the Terms & Conditions and Privacy Policy <span class="required">*</span>
+          </label>
+        </div>
+
+        <button type="submit" id="submitBtn" class="submit-btn">Proceed to Pay</button>
+      </form>
+    </div>
+
+    <!-- Page 2: UPI Payment (Hidden Initially) -->
+    <div id="payment-section" class="body-content">
+      <div class="pay-amount">Pay ₹<span id="display-amount">0.00</span></div>
+
+      <!-- UPI App Deep Links -->
+      <a id="gpay" class="btn gpay" href="#">Open Google Pay</a>
+      <a id="phonepe" class="btn phonepe" href="#">Open PhonePe</a>
+
+      <div class="divider">--- OR ---</div>
+
+      <p style="font-size: 0.9rem; color: #4b5563;">Scan with GPay, PhonePe, or BHIM:</p>
+      
+      <!-- Generated QR Code Container -->
+      <div id="qrcode"></div>
+
+      <button type="button" class="back-btn" onclick="goBack()">← Edit Registration Details</button>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('registrationForm');
+    const formSection = document.getElementById('form-section');
+    const paymentSection = document.getElementById('payment-section');
+    const displayAmount = document.getElementById('display-amount');
+    const qrContainer = document.getElementById('qrcode');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // UPI Merchant Configuration
+    const upiId = "9182503188@ybl";
+    const merchantName = "Videmy Infotech Private Limited";
+
+    form.addEventListener('submit', function(event) {
+      event.preventDefault(); // Stop standard browser page refresh
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = "Saving Data...";
+
+      // Gather form entries
+      const formData = new FormData(form);
+
+      // 1. Submit Data directly to Netlify
+      fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(formData).toString()
+      })
+      .then((response) => {
+        if (response.ok) {
+          // 2. Data Saved! Generate Payment Options
+          const userAmount = parseFloat(document.getElementById('amount').value).toFixed(2);
+          const userName = document.getElementById('name').value;
+          const note = `Fee - ${userName}`;
+
+          displayAmount.innerText = userAmount;
+
+          const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(merchantName)}&am=${userAmount}&cu=INR&tn=${encodeURIComponent(note)}`;
+
+          document.getElementById("gpay").href = upiLink;
+          document.getElementById("phonepe").href = upiLink;
+
+          qrContainer.innerHTML = "";
+          new QRCode(qrContainer, {
+            text: upiLink,
+            width: 160,
+            height: 160
+          });
+
+          // 3. Reveal Payment Screen
+          formSection.style.display = 'none';
+          paymentSection.style.display = 'block';
+        } else {
+          alert("Submission failed. Please check your inputs.");
+        }
+      })
+      .catch((error) => {
+        console.error("Submission Error:", error);
+        alert("Failed to connect to the server. Try again.");
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Proceed to Pay";
+      });
+    });
+
+    function goBack() {
+      paymentSection.style.display = 'none';
+      formSection.style.display = 'block';
+    }
+  </script>
+
+</body>
+</html>
