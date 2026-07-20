@@ -176,7 +176,7 @@
 
     /* --- PAYMENT PAGE STYLES --- */
     #payment-section {
-      display: none; /* Hidden until form is valid */
+      display: none;
       text-align: center;
     }
 
@@ -242,7 +242,7 @@
 
     <!-- Page 1: Registration Form -->
     <div id="form-section" class="body-content">
-      <form id="registrationForm">
+      <form id="registrationForm" action="javascript:void(0);">
 
         <div class="form-group">
           <label for="name">Name <span class="required">*</span></label>
@@ -313,100 +313,105 @@
   </div>
 
   <script>
-    // ==========================================
-    // 1. PASTE YOUR SUPABASE KEYS BELOW HERE
-    // ==========================================
-    const SUPABASE_URL = "https://ncifgjiqkfckesudpanb.supabase.co/rest/v1/"; 
-    const SUPABASE_ANON_KEY = "sb_publishable_q7d7oGlD1J8RbKPApe11cQ_xFsZgJdL"; 
+    window.onload = function() {
+      // Supabase Configuration
+      const SUPABASE_URL = "https://ncifgjiqkfckesudpanb.supabase.co"; 
+      const SUPABASE_ANON_KEY = "sb_publishable_q7d7oGlD1J8RbKPApe11cQ_xFsZgJdL"; 
 
-    // Initialize Supabase Client
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      if (!window.supabase) {
+        alert("Supabase library failed to load. Please refresh the page.");
+        return;
+      }
 
-    // DOM Elements
-    const form = document.getElementById('registrationForm');
-    const formSection = document.getElementById('form-section');
-    const paymentSection = document.getElementById('payment-section');
-    const displayAmount = document.getElementById('display-amount');
-    const qrContainer = document.getElementById('qrcode');
-    const submitBtn = document.getElementById('submitBtn');
+      // Initialize Supabase Client
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // UPI Merchant Configuration
-    const upiId = "9182503188@ybl";
-    const merchantName = "Videmy Infotech Private Limited";
+      // DOM Elements
+      const form = document.getElementById('registrationForm');
+      const formSection = document.getElementById('form-section');
+      const paymentSection = document.getElementById('payment-section');
+      const displayAmount = document.getElementById('display-amount');
+      const qrContainer = document.getElementById('qrcode');
+      const submitBtn = document.getElementById('submitBtn');
 
-    form.addEventListener('submit', async function(event) {
-      event.preventDefault(); // Stop standard browser page reload
+      // UPI Merchant Configuration
+      const upiId = "9182503188@ybl";
+      const merchantName = "Videmy Infotech Private Limited";
 
-      submitBtn.disabled = true;
-      submitBtn.innerText = "Saving Data...";
+      form.addEventListener('submit', async function(event) {
+        event.preventDefault(); // Stop page refresh
 
-      // Capture Input Values
-      const name = document.getElementById('name').value;
-      const phone = document.getElementById('phone').value;
-      const parent_phone = document.getElementById('parent_phone').value;
-      const course = document.getElementById('course').value;
-      const employee_id = document.getElementById('employee_id').value;
-      const email = document.getElementById('email').value;
-      const amount = parseFloat(document.getElementById('amount').value);
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Saving Data...";
 
-      try {
-        // Insert record directly into Supabase SQL Database
-        const { data, error } = await supabase
-          .from('registrations')
-          .insert([
-            {
-              name: name,
-              phone: phone,
-              parent_phone: parent_phone,
-              course: course,
-              employee_id: employee_id,
-              email: email,
-              amount: amount,
-              terms_agreed: true
-            }
-          ]);
+        // Capture Input Values
+        const name = document.getElementById('name').value;
+        const phone = document.getElementById('phone').value;
+        const parent_phone = document.getElementById('parent_phone').value;
+        const course = document.getElementById('course').value;
+        const employee_id = document.getElementById('employee_id').value;
+        const email = document.getElementById('email').value;
+        const amount = parseFloat(document.getElementById('amount').value);
 
-        if (error) {
-          console.error("Database Insert Error:", error);
-          alert("Could not save registration details. " + error.message);
+        try {
+          // Insert record directly into Supabase SQL Database
+          const { data, error } = await supabase
+            .from('registrations')
+            .insert([
+              {
+                name: name,
+                phone: phone,
+                parent_phone: parent_phone,
+                course: course,
+                employee_id: employee_id,
+                email: email,
+                amount: amount,
+                terms_agreed: true
+              }
+            ]);
+
+          if (error) {
+            console.error("Database Insert Error:", error);
+            alert("Could not save registration details: " + error.message);
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Proceed to Pay";
+            return;
+          }
+
+          // Data Saved Successfully -> Build UPI Links & QR Code
+          const formattedAmount = amount.toFixed(2);
+          displayAmount.innerText = formattedAmount;
+
+          const note = `Fee - ${name}`;
+          const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(merchantName)}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent(note)}`;
+
+          document.getElementById("gpay").href = upiLink;
+          document.getElementById("phonepe").href = upiLink;
+
+          qrContainer.innerHTML = "";
+          new QRCode(qrContainer, {
+            text: upiLink,
+            width: 160,
+            height: 160
+          });
+
+          // Display Payment Screen
+          formSection.style.display = 'none';
+          paymentSection.style.display = 'block';
+
+        } catch (err) {
+          console.error("Unexpected error:", err);
+          alert("An error occurred while connecting to the database: " + err.message);
+        } finally {
           submitBtn.disabled = false;
           submitBtn.innerText = "Proceed to Pay";
-          return;
         }
-
-        // Data Saved Successfully -> Build UPI Links & QR Code
-        const formattedAmount = amount.toFixed(2);
-        displayAmount.innerText = formattedAmount;
-
-        const note = `Fee - ${name}`;
-        const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(merchantName)}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent(note)}`;
-
-        document.getElementById("gpay").href = upiLink;
-        document.getElementById("phonepe").href = upiLink;
-
-        qrContainer.innerHTML = "";
-        new QRCode(qrContainer, {
-          text: upiLink,
-          width: 160,
-          height: 160
-        });
-
-        // Display Payment Screen
-        formSection.style.display = 'none';
-        paymentSection.style.display = 'block';
-
-      } catch (err) {
-        console.error("Unexpected error:", err);
-        alert("An error occurred while connecting to the database.");
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = "Proceed to Pay";
-      }
-    });
+      });
+    };
 
     function goBack() {
-      paymentSection.style.display = 'none';
-      formSection.style.display = 'block';
+      document.getElementById('payment-section').style.display = 'none';
+      document.getElementById('form-section').style.display = 'block';
     }
   </script>
 
