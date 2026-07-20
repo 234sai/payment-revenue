@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Videmy Infotech - Registration & Payment</title>
   
-  <!-- Client-side QR Code library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  
   <!-- Supabase JS Client library -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Razorpay Checkout SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   
   <style>
     /* Global Styles */
@@ -173,60 +173,6 @@
       background: #93c5fd;
       cursor: not-allowed;
     }
-
-    /* --- PAYMENT PAGE STYLES --- */
-    #payment-section {
-      display: none;
-      text-align: center;
-    }
-
-    .pay-amount {
-      font-size: 1.5rem;
-      color: #1e293b;
-      margin-bottom: 20px;
-      font-weight: 700;
-    }
-
-    .btn {
-      display: block;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 6px;
-      text-decoration: none;
-      color: #fff;
-      font-weight: bold;
-      transition: opacity 0.2s ease;
-    }
-
-    .btn:hover {
-      opacity: 0.9;
-    }
-
-    .gpay { background: #4285F4; }
-    .phonepe { background: #5f259f; }
-
-    .divider {
-      margin: 15px 0;
-      color: #6b7280;
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-
-    #qrcode {
-      margin: 15px auto;
-      display: flex;
-      justify-content: center;
-    }
-
-    .back-btn {
-      background: none;
-      border: none;
-      color: #6b7280;
-      font-size: 0.85rem;
-      cursor: pointer;
-      margin-top: 15px;
-      text-decoration: underline;
-    }
   </style>
 </head>
 <body>
@@ -240,8 +186,8 @@
       </p>
     </div>
 
-    <!-- Page 1: Registration Form -->
-    <div id="form-section" class="body-content">
+    <!-- Registration Form -->
+    <div class="body-content">
       <form id="registrationForm" action="javascript:void(0);">
 
         <div class="form-group">
@@ -292,32 +238,17 @@
         <button type="submit" id="submitBtn" class="submit-btn">Proceed to Pay</button>
       </form>
     </div>
-
-    <!-- Page 2: UPI Payment (Hidden Initially) -->
-    <div id="payment-section" class="body-content">
-      <div class="pay-amount">Pay ₹<span id="display-amount">0.00</span></div>
-
-      <!-- UPI App Deep Links -->
-      <a id="gpay" class="btn gpay" href="#">Open Google Pay</a>
-      <a id="phonepe" class="btn phonepe" href="#">Open PhonePe</a>
-
-      <div class="divider">--- OR ---</div>
-
-      <p style="font-size: 0.9rem; color: #4b5563;">Scan with GPay, PhonePe, or BHIM:</p>
-      
-      <!-- Generated QR Code Container -->
-      <div id="qrcode"></div>
-
-      <button type="button" class="back-btn" onclick="goBack()">← Edit Registration Details</button>
-    </div>
   </div>
 
   <script>
-    window.onload = function() {
-      // Supabase Configuration
-      const SUPABASE_URL = "https://ncifgjiqkfckesudpanb.supabase.co"; 
-      const SUPABASE_ANON_KEY = "sb_publishable_q7d7oGlD1J8RbKPApe11cQ_xFsZgJdL"; 
+    // Supabase Configuration
+    const SUPABASE_URL = "https://ncifgjiqkfckesudpanb.supabase.co"; 
+    const SUPABASE_ANON_KEY = "sb_publishable_q7d7oGlD1J8RbKPApe11cQ_xFsZgJdL"; 
 
+    // ⚠️ PASTE YOUR RAZORPAY TEST KEY ID HERE BELOW
+    const RAZORPAY_KEY_ID = "rzp_test_TFjQ9NGFrP6QY9";
+
+    window.onload = function() {
       if (!window.supabase) {
         alert("Supabase library failed to load. Please refresh the page.");
         return;
@@ -326,20 +257,11 @@
       // Initialize Supabase Client
       const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      // DOM Elements
       const form = document.getElementById('registrationForm');
-      const formSection = document.getElementById('form-section');
-      const paymentSection = document.getElementById('payment-section');
-      const displayAmount = document.getElementById('display-amount');
-      const qrContainer = document.getElementById('qrcode');
       const submitBtn = document.getElementById('submitBtn');
 
-      // UPI Merchant Configuration
-      const upiId = "9182503188@ybl";
-      const merchantName = "Videmy Infotech Private Limited";
-
       form.addEventListener('submit', async function(event) {
-        event.preventDefault(); // Stop page refresh
+        event.preventDefault(); // Prevent page reload
 
         submitBtn.disabled = true;
         submitBtn.innerText = "Saving Data...";
@@ -354,7 +276,7 @@
         const amount = parseFloat(document.getElementById('amount').value);
 
         try {
-          // Insert record directly into Supabase SQL Database
+          // 1. Insert record into Supabase SQL Database
           const { data, error } = await supabase
             .from('registrations')
             .insert([
@@ -378,41 +300,46 @@
             return;
           }
 
-          // Data Saved Successfully -> Build UPI Links & QR Code
-          const formattedAmount = amount.toFixed(2);
-          displayAmount.innerText = formattedAmount;
+          // 2. Open Razorpay Gateway Modal
+          const options = {
+            key: RAZORPAY_KEY_ID,
+            amount: amount * 100, // Amount converted to paise (₹1 = 100 paise)
+            currency: "INR",
+            name: "Videmy Infotech Private Limited",
+            description: `Course Fee - ${course}`,
+            prefill: {
+              name: name,
+              email: email,
+              contact: phone
+            },
+            theme: {
+              color: "#2563eb"
+            },
+            handler: function (response) {
+              alert(`Payment Successful! Payment ID: ${response.razorpay_payment_id}`);
+              form.reset();
+              submitBtn.disabled = false;
+              submitBtn.innerText = "Proceed to Pay";
+            },
+            modal: {
+              ondismiss: function() {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Proceed to Pay";
+              }
+            }
+          };
 
-          const note = `Fee - ${name}`;
-          const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(merchantName)}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent(note)}`;
-
-          document.getElementById("gpay").href = upiLink;
-          document.getElementById("phonepe").href = upiLink;
-
-          qrContainer.innerHTML = "";
-          new QRCode(qrContainer, {
-            text: upiLink,
-            width: 160,
-            height: 160
-          });
-
-          // Display Payment Screen
-          formSection.style.display = 'none';
-          paymentSection.style.display = 'block';
+          const rzp = new Razorpay(options);
+          rzp.open();
 
         } catch (err) {
           console.error("Unexpected error:", err);
-          alert("An error occurred while connecting to the database: " + err.message);
-        } finally {
+          alert("An error occurred: " + err.message);
           submitBtn.disabled = false;
           submitBtn.innerText = "Proceed to Pay";
         }
       });
     };
-
-    function goBack() {
-      document.getElementById('payment-section').style.display = 'none';
-      document.getElementById('form-section').style.display = 'block';
-    }
   </script>
 
 </body>
