@@ -339,22 +339,24 @@
   </div>
 
   <script>
-    // Global State
+    // Global References
     let pendingData = null;
     let supabaseClient = null;
 
-    // Unified Configuration
-    const TARGET_UPI_ID = "9182503188@ybl"; // Matched both Copy Box & QR code
+    // Supabase Configuration & Unified Merchant VPA
+    const TARGET_UPI_ID = "9182503188@ybl";
     const MERCHANT_NAME = "Videmy Infotech Private Limited";
     const SUPABASE_URL = "https://ncifgjiqkfckesudpanb.supabase.co"; 
     const SUPABASE_ANON_KEY = "sb_publishable_q7d7oGlD1J8RbKPApe11cQ_xFsZgJdL";
 
+    // Initialize Supabase Client
+    if (window.supabase) {
+      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
     window.onload = function() {
-      // Initialize Supabase safely
-      if (window.supabase) {
+      if (!supabaseClient && window.supabase) {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      } else {
-        alert("Supabase client failed to load. Check your internet connection.");
       }
 
       const form = document.getElementById('registrationForm');
@@ -366,7 +368,7 @@
       form.addEventListener('submit', function(event) {
         event.preventDefault();
 
-        // 1. Store inputs temporarily in memory
+        // 1. Capture Form Inputs in Memory
         pendingData = {
           name: document.getElementById('name').value.trim(),
           phone: document.getElementById('phone').value.trim(),
@@ -381,7 +383,7 @@
         const formattedAmount = pendingData.amount.toFixed(2);
         displayAmount.innerText = formattedAmount;
 
-        // 2. Generate UPI QR Code with synchronized UPI ID
+        // 2. Generate UPI QR Code
         const note = `Fee - ${pendingData.name}`;
         const upiLink = `upi://pay?pa=${encodeURIComponent(TARGET_UPI_ID)}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${formattedAmount}&cu=INR&tn=${encodeURIComponent(note)}`;
 
@@ -392,44 +394,44 @@
           height: 160
         });
 
-        // 3. Render Payment View
+        // 3. Navigate to Payment View
         formSection.style.display = 'none';
         paymentSection.style.display = 'block';
       });
     };
 
-    // Copy UPI Function
+    // Helper: Copy UPI ID
     function copyUPI() {
       const vpaField = document.getElementById("upiVpa");
       vpaField.select();
       navigator.clipboard.writeText(vpaField.value);
-      alert("UPI ID copied! Paste it in GPay, PhonePe, or Paytm to complete payment.");
+      alert("UPI ID copied! Open GPay, PhonePe, or Paytm and paste to pay.");
     }
 
-    // Submit Verification & Save to Database
+    // Helper: Save Registration + UTR Number to Supabase
     async function submitVerification() {
       const utrInput = document.getElementById('utr_number').value.trim();
       const confirmBtn = document.getElementById('confirmPayBtn');
 
       if (!utrInput || utrInput.length !== 12 || isNaN(utrInput)) {
-        alert("Please enter a valid 12-digit UPI Reference / UTR Number.");
+        alert("Please enter a valid 12-digit UPI UTR / Transaction Reference Number.");
         return;
       }
 
       if (!pendingData) {
-        alert("Session expired. Please click 'Edit Registration Details' and re-submit.");
+        alert("Session lost. Please click 'Edit Registration Details' and submit again.");
         return;
       }
 
       if (!supabaseClient) {
-        alert("Database connection uninitialized. Please refresh the page.");
+        alert("Supabase is not connected. Please refresh the page and try again.");
         return;
       }
 
       confirmBtn.disabled = true;
-      confirmBtn.innerText = "Submitting...";
+      confirmBtn.innerText = "Saving to Database...";
 
-      // Attach UTR Number and Verification Status
+      // Attach UTR and status payload
       pendingData.utr_number = utrInput;
       pendingData.payment_status = "Pending Verification";
 
@@ -439,18 +441,18 @@
           .insert([pendingData]);
 
         if (error) {
-          console.error("Supabase Insertion Error:", error);
-          alert("Failed to save registration: " + error.message);
+          console.error("Supabase Save Error:", error);
+          alert("Database Error: " + error.message);
           confirmBtn.disabled = false;
           confirmBtn.innerText = "Submit Payment Proof";
           return;
         }
 
-        alert("Registration and Payment Proof submitted successfully!");
+        alert("Registration and Payment Proof saved successfully!");
         location.reload();
 
       } catch (err) {
-        console.error("Script Exception:", err);
+        console.error("Exception:", err);
         alert("Unexpected error: " + err.message);
         confirmBtn.disabled = false;
         confirmBtn.innerText = "Submit Payment Proof";
